@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shelf Life Study Schedule</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface2: #f0f2f5;
+  --border: #dde1e8;
+  --text: #111827;
+  --text2: #5a6270;
+  --text3: #9ca3af;
+  --accent: #1a56a0;
+  --accent2: #e8f0fb;
+  --radius: 10px;
+  --radius-sm: 6px;
+  /* status colors matching the spreadsheet */
+  --done-bg: #c6efce; --done-text: #276221;
+  --near-bg: #ffeb9c; --near-text: #9c6500;
+  --end-bg: #ffc7ce; --end-text: #9c0006;
+  --test-bg: #d0e4f7; --test-text: #1a4f7a;
+  --x-color: #888;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 13px; }
+
+/* NAV TABS */
+nav { background: var(--accent); display: flex; align-items: center; gap: 0; padding: 0 24px; height: 52px; }
+.nav-logo { font-size: 15px; font-weight: 700; color: #fff; margin-right: 28px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+.nav-logo span { opacity: 0.7; font-weight: 400; }
+.nav-tab { padding: 0 18px; height: 52px; display: inline-flex; align-items: center; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.7); cursor: pointer; border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s; user-select: none; }
+.nav-tab:hover { color: #fff; }
+.nav-tab.active { color: #fff; border-bottom-color: #fff; }
+.nav-right { margin-left: auto; display: flex; gap: 8px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.12); color: #fff; transition: background 0.15s; }
+.btn:hover { background: rgba(255,255,255,0.22); }
+.btn-white { background: #fff; color: var(--accent); border-color: #fff; }
+.btn-white:hover { background: #e8f0fb; }
+.btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* YEAR SUB-NAVIGATION */
+.year-tabs { display: flex; gap: 4px; margin-bottom: 16px; background: var(--surface2); padding: 4px; border-radius: var(--radius-sm); width: max-content; border: 1px solid var(--border); }
+.year-tab { padding: 6px 16px; font-size: 12px; font-weight: 600; color: var(--text2); border-radius: 4px; cursor: pointer; border: none; background: transparent; transition: all 0.15s; }
+.year-tab:hover { color: var(--text); background: rgba(0,0,0,0.03); }
+.year-tab.active { background: var(--surface); color: var(--accent); box-shadow: 0 2px 5px rgba(0,0,0,0.06); }
+
+/* PAGES */
+.page { display: none; }
+.page.active { display: block; }
+
+/* DASHBOARD PAGE */
+.dash-wrap { max-width: 1450px; margin: 0 auto; padding: 24px; }
+.dash-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.dash-sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+
+/* Summary cards */
+.summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.sum-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
+.sum-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.sum-val { font-size: 26px; font-weight: 700; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+.sum-val.c-blue { color: var(--accent); }
+.sum-val.c-green { color: #276221; }
+.sum-val.c-yellow { color: #9c6500; }
+.sum-val.c-red { color: #9c0006; }
+
+/* Legend */
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+.leg-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+.leg-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+.leg-dot.done { background: var(--done-bg); border: 1px solid #9ecba5; }
+.leg-dot.near { background: var(--near-bg); border: 1px solid #e6cc6a; }
+.leg-dot.endlife { background: var(--end-bg); border: 1px solid #e8a0a5; }
+.leg-dot.test { background: var(--test-bg); border: 1px solid #8ab4d4; }
+
+/* Schedule table */
+.sched-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; }
+.sched-table { border-collapse: collapse; min-width: 1100px; width: 100%; font-size: 12px; }
+.sched-table th { background: var(--accent); color: #fff; font-weight: 600; padding: 9px 10px; text-align: left; white-space: nowrap; border-right: 1px solid rgba(255,255,255,0.15); font-size: 11px; letter-spacing: 0.03em; }
+.sched-table th.month-head { text-align: center; min-width: 42px; }
+.sched-table .year-head { background: #0f3d7a; text-align: center; font-size: 11px; letter-spacing: 0.08em; }
+.sched-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); border-right: 1px solid #eef0f3; vertical-align: middle; }
+.sched-table tbody tr:last-child td { border-bottom: none; }
+.sched-table tbody tr:hover td { background: #f7f9fc; }
+.sched-table .ctrl-no { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); font-weight: 500; }
+.sched-table .sku-name { font-weight: 600; color: var(--text); max-width: 200px; }
+.sched-table .in-charge { color: var(--text2); }
+.sched-table .prod-date { white-space: nowrap; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); }
+.sched-table .shelf-life { text-align: center; font-weight: 600; color: var(--accent); }
+.sched-table .freq { font-size: 11px; color: var(--text2); max-width: 120px; }
+.sched-table .samples { font-size: 11px; color: var(--text2); min-width: 100px; }
+.month-cell { text-align: center; min-width: 42px; padding: 4px 2px; cursor: pointer; transition: background-color 0.15s; position: relative; }
+.month-cell:hover { background-color: var(--accent2) !important; }
+
+/* Dropdown Menu Layout */
+.cell-select {
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  z-index: 100; display: none; background: white; border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: var(--radius-sm); padding: 4px; gap: 2px;
+}
+.month-cell:focus-within .cell-select, .cell-select.open { display: flex; flex-direction: column; }
+.cell-opt {
+  padding: 4px 8px; font-size: 11px; text-align: left; border-radius: 3px;
+  cursor: pointer; background: transparent; border: none; white-space: nowrap; width: 100%;
+}
+.cell-opt:hover { background: var(--surface2); }
+
+/* Month markers */
+.marker { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 4px; font-size: 11px; font-weight: 600; user-select: none; }
+.marker.done { background: var(--done-bg); color: var(--done-text); }
+.marker.near { background: var(--near-bg); color: var(--near-text); }
+.marker.endlife { background: var(--end-bg); color: var(--end-text); }
+.marker.test { background: var(--test-bg); color: var(--test-text); }
+.marker.x { background: none; color: var(--x-color); font-size: 13px; }
+.marker.empty { background: none; border: 1px dashed var(--border); color: var(--text3); }
+
+/* ADD PRODUCT PAGE */
+.tracker-wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.page-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.page-sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+.search-wrap { position: relative; flex: 1; min-width: 180px; }
+.search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; fill: none; stroke: var(--text3); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+input[type="text"], input[type="date"], select {
+  width: 100%; padding: 7px 11px; font-size: 12px; font-family: 'Inter', sans-serif;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface);
+  color: var(--text); outline: none; transition: border-color 0.15s;
+}
+input[type="text"]:focus, input[type="date"]:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,160,0.1); }
+.search-wrap input { padding-left: 32px; }
+select { cursor: pointer; }
+.tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+table.prod-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.prod-tbl th { padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.prod-tbl td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+table.prod-tbl tbody tr:last-child td { border-bottom: none; }
+table.prod-tbl tbody tr:hover td { background: #f7f9fc; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; border: 1px solid; white-space: nowrap; }
+.badge::before { content: ''; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.badge.safe { background: var(--done-bg); color: var(--done-text); border-color: #9ecba5; }
+.badge.warn { background: var(--near-bg); color: var(--near-text); border-color: #e6cc6a; }
+.badge.danger { background: var(--end-bg); color: var(--end-text); border-color: #e8a0a5; }
+.del-btn { background: none; border: none; cursor: pointer; color: var(--text3); padding: 3px; border-radius: 3px; display: inline-flex; }
+.del-btn:hover { color: #9c0006; background: var(--end-bg); }
+.del-btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.empty-state { text-align: center; padding: 40px; color: var(--text2); font-size: 13px; }
+.export-hint { font-size: 11px; color: var(--text3); margin-top: 10px; text-align: right; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); }
+.prod-name-cell { font-weight: 600; }
+
+/* MODAL */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; align-items: center; justify-content: center; padding: 16px; }
+.overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: 14px; border: 1px solid var(--border); padding: 26px; width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.14); }
+.modal-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.modal-title { font-size: 15px; font-weight: 700; }
+.modal-close { background: none; border: none; cursor: pointer; color: var(--text2); padding: 3px; border-radius: 4px; display: flex; }
+.modal-close:hover { color: var(--text); background: var(--surface2); }
+.modal-close svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.form-row { margin-bottom: 13px; }
+.form-row label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.form-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.btn-modal { display: inline-flex; align-items: center; gap: 6px; padding: 7px 15px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); transition: background 0.15s; }
+.btn-modal:hover { background: var(--surface2); }
+.btn-modal.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-modal.primary:hover { background: #0f3d7a; }
+.err { font-size: 11px; color: #9c0006; margin-top: 12px; display: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">🧪 <span>Fisher Farms</span> Shelf Life Tracker</div>
+  <span class="nav-tab active" onclick="showPage('dash', this)">Schedule</span>
+  <span class="nav-tab" onclick="showPage('tracker', this)">Products</span>
+  <div class="nav-right">
+    <button class="btn btn-white" onclick="exportCSV()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export CSV
+    </button>
+    <button class="btn" onclick="openAddStudy()">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add study
+    </button>
+  </div>
+</nav>
+
+<div class="page active" id="page-dash">
+  <div class="dash-wrap">
+    <div class="dash-title">Shelf Life Study Schedule — Shrimp</div>
+    <div class="dash-sub">Overview of active shelf life studies. Real-time updates are synchronized globally across all file nodes. Click grid nodes to manipulate schedules.</div>
+
+    <div class="year-tabs">
+      <button class="year-tab" id="ytab-2024" onclick="changeYear(2024)">2024</button>
+      <button class="year-tab active" id="ytab-2025" onclick="changeYear(2025)">2025</button>
+      <button class="year-tab" id="ytab-2026" onclick="changeYear(2026)">2026</button>
+    </div>
+
+    <div class="summary-row" id="dash-summary"></div>
+
+    <div class="legend">
+      <strong style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em">Legend:</strong>
+      <div class="leg-item"><div class="leg-dot done"></div> Done / Tested</div>
+      <div class="leg-item"><div class="leg-dot near"></div> Target for "not ended" shelf life</div>
+      <div class="leg-item"><div class="leg-dot endlife"></div> End of target shelf life</div>
+      <div class="leg-item"><div class="leg-dot test"></div> Scheduled test</div>
+      <div class="leg-item" style="gap:4px"><span style="font-size:14px;color:#888;font-weight:700">×</span> Skipped / not applicable</div>
+    </div>
+
+    <div class="sched-wrap">
+      <table class="sched-table" id="sched-table">
+        <thead>
+          <tr>
+            <th rowspan="2" style="min-width:50px">Control No.</th>
+            <th rowspan="2" style="min-width:180px">SKU</th>
+            <th rowspan="2" style="min-width:80px">R&amp;D In-charge</th>
+            <th rowspan="2" style="min-width:100px">Production Date</th>
+            <th rowspan="2" style="min-width:80px;text-align:center">Target Shelf Life</th>
+            <th rowspan="2" style="min-width:120px">Frequency of Testing</th>
+            <th colspan="12" class="year-head" id="grid-year-header">2025</th>
+            <th rowspan="2" style="min-width:110px">No. of samples needed until end of study period</th>
+            <th rowspan="2" style="min-width:40px"></th>
+          </tr>
+          <tr id="month-heads"></tr>
+        </thead>
+        <tbody id="sched-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-tracker">
+  <div class="tracker-wrap">
+    <div class="page-title">Product Tracker</div>
+    <div class="page-sub">Add and monitor individual product batches with expiry date tracking.</div>
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="search" placeholder="Search product or batch…" oninput="renderProducts()" />
+      </div>
+      <select id="filter-cat" onchange="renderProducts()">
+        <option value="">All categories</option>
+        <option>Seafood</option><option>Food</option><option>Beverage</option>
+        <option>Medicine</option><option>Cosmetics</option><option>Chemical</option><option>Other</option>
+      </select>
+      <select id="filter-status" onchange="renderProducts()">
+        <option value="">All status</option>
+        <option value="safe">Safe</option>
+        <option value="warn">Near expiry</option>
+        <option value="danger">Expired</option>
+      </select>
+      <button class="btn-modal primary" onclick="openAddProduct()">
+        <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add product
+      </button>
+    </div>
+    <div class="tbl-wrap">
+      <table class="prod-tbl">
+        <thead><tr>
+          <th>Product</th><th>Batch no.</th><th>Category</th>
+          <th>Mfg date</th><th>Expiry date</th><th>Status</th><th>Days left</th><th></th>
+        </tr></thead>
+        <tbody id="prod-tbl"></tbody>
+      </table>
+      <div id="prod-empty" class="empty-state" style="display:none">No products found. Add one above.</div>
+    </div>
+    <p class="export-hint">All nodes are synchronized securely via cloud streaming pipeline.</p>
+  </div>
+</div>
+
+<div class="overlay" id="study-overlay" onclick="handleOverlay(event,'study-overlay')">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Add shelf life study</span>
+      <button class="modal-close" onclick="closeOverlay('study-overlay')">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="form-row"><label>SKU / Product name *</label><input type="text" id="st-name" placeholder="e.g. Shrimp Skewers (New Formulation)" /></div>
+    <div class="form-grid2">
+      <div class="form-row"><label>Control no.</label><input type="text" id="st-ctrl" placeholder="e.g. 046" /></div>
+      <div class="form-row"><label>R&amp;D In-charge</label><input type="text" id="st-incharge" placeholder="e.g. Julia" /></div>
+    </div>
+    <div class="form-grid2">
+      <div class="form-row"><label>Production date *</label><input type="date" id="st-proddate" /></div>
+      <div class="form-row"><label>Target shelf life</label><input type="text" id="st-shelf" placeholder="e.g. 12 months" /></div>
+    </div>
+    <div class="form-row"><label>Frequency of testing</label><input type="text" id="st-freq" placeholder="e.g. Every 4th month" /></div>
+    <div class="form-row"><label>No. of samples</label><input type="text" id="st-samples" placeholder="e.g. 15 packs x 200g" /></div>
+    <p class="err" id="st-err">Please fill in SKU name and production date.</p>
+    <div class="modal-footer">
+      <button class="btn-modal" onclick="closeOverlay('study-overlay')">Cancel</button>
+      <button class="btn-modal primary" onclick="saveStudy()">Add study</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="prod-overlay" onclick="handleOverlay(event,'prod-overlay')">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Add product</span>
+      <button class="modal-close" onclick="closeOverlay('prod-overlay')">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="form-row"><label>Product name *</label><input type="text" id="f-name" placeholder="e.g. Shrimp Skewers" /></div>
+    <div class="form-grid2">
+      <div class="form-row"><label>Batch / Lot no.</label><input type="text" id="f-batch" placeholder="e.g. LOT-001" /></div>
+      <div class="form-row"><label>Category</label>
+        <select id="f-cat"><option>Seafood</option><option>Food</option><option>Beverage</option><option>Medicine</option><option>Cosmetics</option><option>Chemical</option><option>Other</option></select>
+      </div>
+    </div>
+    <div class="form-grid2">
+      <div class="form-row"><label>Manufacture date</label><input type="date" id="f-mfg" /></div>
+      <div class="form-row"><label>Expiry date *</label><input type="date" id="f-exp" /></div>
+    </div>
+    <p class="err" id="prod-err">Please fill in product name and expiry date.</p>
+    <div class="modal-footer">
+      <button class="btn-modal" onclick="closeOverlay('prod-overlay')">Cancel</button>
+      <button class="btn-modal primary" onclick="saveProduct()">Save product</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+let currentSelectedYear = 2025;
+
+/* ── CLOUD STORAGE INTEGRATION ── */
+// Paste your copied URL inside the quotes below!
+const DATABASE_URL = "https://fisher-farms-16c71-default-rtdb.asia-southeast1.firebasedatabase.app/";
+
+/* Baseline Original Fallback Data Structure */
+const defaultStudies = [
+  { id:1, ctrl:'034', name:'Expired Japanese Breadcrumbs', incharge:'Julia', proddate:'2021-01-29', shelf:'12 months', freq:'Every 4th month', samples:'', history: { 2025: {0:'done',1:'done',2:'done',3:'done',4:'done',5:'done',6:'done',7:'done'} } },
+  { id:2, ctrl:'', name:'Par Fried Poppers', incharge:'Julia', proddate:'2023-04-15', shelf:'12 months', freq:'Skip every 4th mo.', samples:'15 packs x 200g', history: { 2025: {0:'done',1:'done',2:'x',3:'done',4:'x',5:'x',6:'x',7:'x'} } },
+  { id:3, ctrl:'035', name:'Nobashi Ebi 13-15g', incharge:'Julia', proddate:'2023-11-09', shelf:'24 months', freq:'Skip every 4th mo.', samples:'', history: { 2025: {0:'x',1:'x',2:'x',3:'x',4:'test',5:'x',6:'x',7:'test'} } },
+  { id:4, ctrl:'', name:'Ebi Fry (BIN013)', incharge:'Julia', proddate:'2023-03-06', shelf:'24 months', freq:'Skip every 4th mo.', samples:'26 packs x 300g', history: { 2025: {0:'x',1:'x',2:'x',3:'x',4:'endlife',5:'x',6:'x',7:'x'} } },
+  { id:5, ctrl:'045', name:'Corn & Coconut Breaded Shrimp (HB)', incharge:'Julia', proddate:'2025-03-10', shelf:'12 months', freq:'Skip every 4th mo.', samples:'25 packs x 256g', history: { 2025: {0:'x',1:'x',2:'x',3:'x',4:'near',5:'x',6:'x',7:'x'} } },
+  { id:6, ctrl:'', name:'BIN015 and Guar Gum ORIG Poppers, Low Sod.', incharge:'Julia', proddate:'2026-02-10', shelf:'24 months', freq:'Skip every 4th mo.', samples:'', history: { 2025: {0:'x',1:'x',2:'x',3:'x',4:'x',5:'x',6:'x',7:'x'} } },
+  { id:7, ctrl:'', name:'BIN015 and Guar Gum Poppers (CHE and SE)', incharge:'Julia', proddate:'2025-10-30', shelf:'12 months', freq:'Skip every 4th mo.', samples:'', history: { 2025: {0:'x',1:'x',2:'x',3:'x',4:'x',5:'x',6:'x',7:'x'} } },
+  { id:8, ctrl:'', name:'Shrimp Skewers (New Formulation)', incharge:'Julia', proddate:'2025-10-09', shelf:'12 months', freq:'Skip every 4th mo.', samples:'', history: { 2025: {0:'x',1:'x',2:'x',3:'x',4:'x',5:'x',6:'x',7:'x'} } }
+];
+
+const defaultProducts = [
+  {id:1,name:'Shrimp Skewers',batch:'LOT-001',cat:'Seafood',mfg:'2025-10-09',exp:'2026-10-09'},
+  {id:2,name:'Breaded Shrimp (HB)',batch:'LOT-002',cat:'Seafood',mfg:'2025-03-10',exp:'2026-03-10'},
+  {id:3,name:'Nobashi Ebi 13-15g',batch:'LOT-003',cat:'Seafood',mfg:'2023-11-09',exp:'2025-11-09'},
+  {id:4,name:'Ebi Fry BIN013',batch:'LOT-004',cat:'Seafood',mfg:'2023-03-06',exp:'2025-03-06'}
+];
+
+let studies = [...defaultStudies];
+let products = [...defaultProducts];
+
+// Network Communication functions
+async function syncPush(key, data) {
+  if (!DATABASE_URL || DATABASE_URL.includes("YOUR_FIREBASE")) return;
+  try {
+    await fetch(`${DATABASE_URL}/${key}.json`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch(e) { console.error("Sync payload drop failed:", e); }
+}
+
+function initLiveListener() {
+  if (!DATABASE_URL || DATABASE_URL.includes("YOUR_FIREBASE")) {
+    console.warn("Firebase URL skipped. Displaying static data node.");
+    renderDash();
+    renderProducts();
+    return;
+  }
+
+  const eventSource = new EventSource(`${DATABASE_URL}/.json`);
+  eventSource.onmessage = function(event) {
+    const root = JSON.parse(event.data);
+    if (root && root.data) {
+      if (root.data.studies) studies = Object.values(root.data.studies);
+      if (root.data.products) products = Object.values(root.data.products);
+    } else if (root) {
+      if (root.studies) studies = Object.values(root.studies);
+      if (root.products) products = Object.values(root.products);
+    }
+    // Deep structural normalize arrays if dropped to object mapping
+    studies = Array.isArray(studies) ? studies : Object.values(studies || {});
+    products = Array.isArray(products) ? products : Object.values(products || {});
+    
+    renderDash();
+    renderProducts();
+  };
+  
+  // Seed Database baseline if initialized fresh empty 
+  fetch(`${DATABASE_URL}/.json`).then(r => r.json()).then(d => {
+    if(!d || !d.studies) {
+      syncPush('studies', defaultStudies);
+      syncPush('products', defaultProducts);
+    }
+  });
+}
+
+/* ── UI INTERACTIONS & LOGIC ── */
+function showPage(id, tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  tab.classList.add('active');
+}
+
+function changeYear(year) {
+  currentSelectedYear = year;
+  document.querySelectorAll('.year-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('ytab-' + year).classList.add('active');
+  document.getElementById('grid-year-header').textContent = year;
+  renderDash();
+}
+
+let currentActiveSelect = null;
+function toggleCellMenu(e) {
+  e.stopPropagation();
+  const cell = e.currentTarget;
+  const existingMenu = cell.querySelector('.cell-select');
+  
+  if (currentActiveSelect && currentActiveSelect !== existingMenu) {
+    currentActiveSelect.classList.remove('open');
+  }
+  if (existingMenu.classList.contains('open')) {
+    existingMenu.classList.remove('open');
+    currentActiveSelect = null;
+  } else {
+    existingMenu.classList.add('open');
+    currentActiveSelect = existingMenu;
+  }
+}
+
+function updateCellStatus(studyId, monthIdx, value) {
+  const study = studies.find(s => s.id === studyId);
+  if (study) {
+    if (!study.history) study.history = {};
+    if (!study.history[currentSelectedYear]) study.history[currentSelectedYear] = {};
+    
+    if (value === '') {
+      delete study.history[currentSelectedYear][monthIdx];
+    } else {
+      study.history[currentSelectedYear][monthIdx] = value;
+    }
+    syncPush('studies', studies);
+    renderDash();
+  }
+}
+
+function deleteStudy(id) {
+  if (!confirm('Completely remove this shelf life study?')) return;
+  studies = studies.filter(s => s.id !== id);
+  syncPush('studies', studies);
+  renderDash();
+}
+
+document.addEventListener('click', () => {
+  if (currentActiveSelect) {
+    currentActiveSelect.classList.remove('open');
+    currentActiveSelect = null;
+  }
+});
+
+function renderDash(){
+  const mh = document.getElementById('month-heads');
+  mh.innerHTML = '';
+  for(let i=0;i<12;i++){
+    const th = document.createElement('th');
+    th.className = 'month-head';
+    th.textContent = MONTHS[i];
+    mh.appendChild(th);
+  }
+
+  const total = studies.length;
+  let done=0, active=0, ending=0;
+  studies.forEach(s=>{
+    const yearData = (s.history && s.history[currentSelectedYear]) ? Object.values(s.history[currentSelectedYear]) : [];
+    if(yearData.includes('endlife')) ending++;
+    else if(yearData.includes('done')) done++;
+    else active++;
+  });
+  
+  document.getElementById('dash-summary').innerHTML = `
+    <div class="sum-card"><div class="sum-label">Total studies</div><div class="sum-val c-blue">${total}</div></div>
+    <div class="sum-card"><div class="sum-label">In progress (${currentSelectedYear})</div><div class="sum-val c-green">${active+done}</div></div>
+    <div class="sum-card"><div class="sum-label">Nearing end (${currentSelectedYear})</div><div class="sum-val c-yellow">${ending}</div></div>
+    <div class="sum-card"><div class="sum-label">R&D members</div><div class="sum-val c-blue">${[...new Set(studies.map(s=>s.incharge).filter(Boolean))].length}</div></div>
+  `;
+
+  const tbody = document.getElementById('sched-body');
+  tbody.innerHTML = '';
+  studies.forEach(s=>{
+    const tr = document.createElement('tr');
+    let monthCells = '';
+    
+    for(let i=0;i<12;i++){
+      const m = (s.history && s.history[currentSelectedYear] && s.history[currentSelectedYear][i] !== undefined) ? s.history[currentSelectedYear][i] : '';
+      let inner = `<span class="marker empty">+</span>`;
+      if(m==='done') inner = `<span class="marker done">✓</span>`;
+      else if(m==='near') inner = `<span class="marker near">○</span>`;
+      else if(m==='endlife') inner = `<span class="marker endlife">●</span>`;
+      else if(m==='test') inner = `<span class="marker test">○</span>`;
+      else if(m==='x') inner = `<span class="marker x">×</span>`;
+      
+      monthCells += `
+        <td class="month-cell" onclick="toggleCellMenu(event)">
+          ${inner}
+          <div class="cell-select">
+            <button class="cell-opt" onclick="updateCellStatus(${s.id}, ${i}, 'done')">✓ Done</button>
+            <button class="cell-opt" onclick="updateCellStatus(${s.id}, ${i}, 'near')">○ Target</button>
+            <button class="cell-opt" onclick="updateCellStatus(${s.id}, ${i}, 'endlife')">● End Life</button>
+            <button class="cell-opt" onclick="updateCellStatus(${s.id}, ${i}, 'test')">○ Scheduled</button>
+            <button class="cell-opt" onclick="updateCellStatus(${s.id}, ${i}, 'x')">× Skip</button>
+            <button class="cell-opt" style="color:#9c0006" onclick="updateCellStatus(${s.id}, ${i}, '')">Clear</button>
+          </div>
+        </td>`;
+    }
+    const pd = s.proddate ? formatDate(s.proddate) : '—';
+    tr.innerHTML = `
+      <td class="ctrl-no">${esc(s.ctrl||'')}</td>
+      <td class="sku-name">${esc(s.name)}</td>
+      <td class="in-charge">${esc(s.incharge||'')}</td>
+      <td class="prod-date">${pd}</td>
+      <td class="shelf-life">${esc(s.shelf||'')}</td>
+      <td class="freq">${esc(s.freq||'')}</td>
+      ${monthCells}
+      <td class="samples">${esc(s.samples||'')}</td>
+      <td>
+        <button class="del-btn" onclick="event.stopPropagation(); deleteStudy(${s.id})">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function getStatus(expDate){
+  const exp = new Date(expDate);
+  const diff = Math.round((exp-TODAY)/86400000);
+  if(diff<0) return {label:'Expired',cls:'danger',days:diff};
+  if(diff<=30) return {label:'Near expiry',cls:'warn',days:diff};
+  return {label:'Safe',cls:'safe',days:diff};
+}
+
+function renderProducts(){
+  const search = document.getElementById('search').value.toLowerCase();
+  const cat = document.getElementById('filter-cat').value;
+  const sf = document.getElementById('filter-status').value;
+  const filtered = products.filter(p=>{
+    if(search && !p.name.toLowerCase().includes(search) && !p.batch.toLowerCase().includes(search)) return false;
+    if(cat && p.cat!==cat) return false;
+    if(sf){ const s=getStatus(p.exp); if(s.cls!==sf) return false; }
+    return true;
+  });
+  const tbody = document.getElementById('prod-tbl');
+  tbody.innerHTML='';
+  document.getElementById('prod-empty').style.display = filtered.length===0?'block':'none';
+  filtered.forEach(p=>{
+    const s=getStatus(p.exp);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="prod-name-cell">${esc(p.name)}</td>
+      <td class="mono">${esc(p.batch)}</td>
+      <td>${esc(p.cat)}</td>
+      <td class="mono">${formatDate(p.mfg)}</td>
+      <td class="mono">${formatDate(p.exp)}</td>
+      <td><span class="badge ${s.cls}">${s.label}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:${s.cls==='danger'?'#9c0006':s.cls==='warn'?'#9c6500':'#276221'}">${s.days<0?Math.abs(s.days)+'d ago':s.days+'d'}</td>
+      <td><button class="del-btn" onclick="deleteProduct(${p.id})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function handleOverlay(e,id){ if(e.target===document.getElementById(id)) closeOverlay(id); }
+function closeOverlay(id){ document.getElementById(id).classList.remove('open'); }
+
+function openAddStudy(){
+  ['st-name','st-ctrl','st-incharge','st-shelf','st-freq','st-samples'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('st-proddate').value='';
+  document.getElementById('st-err').style.display='none';
+  document.getElementById('study-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('st-name').focus(),80);
+}
+
+function saveStudy(){
+  const name=document.getElementById('st-name').value.trim();
+  const proddate=document.getElementById('st-proddate').value;
+  if(!name||!proddate){ document.getElementById('st-err').style.display='block'; return; }
+  const nextId = studies.reduce((m,s)=>Math.max(m,s.id),0)+1;
+  studies.push({
+    id:nextId, ctrl:document.getElementById('st-ctrl').value.trim(),
+    name, incharge:document.getElementById('st-incharge').value.trim(),
+    proddate, shelf:document.getElementById('st-shelf').value.trim(),
+    freq:document.getElementById('st-freq').value.trim(),
+    samples:document.getElementById('st-samples').value.trim(), history:{}
+  });
+  syncPush('studies', studies); closeOverlay('study-overlay'); renderDash();
+}
+
+function openAddProduct(){
+  ['f-name','f-batch','f-mfg','f-exp'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('prod-err').style.display='none';
+  document.getElementById('prod-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('f-name').focus(),80);
+}
+
+function saveProduct(){
+  const name=document.getElementById('f-name').value.trim();
+  const exp=document.getElementById('f-exp').value;
+  if(!name||!exp){ document.getElementById('prod-err').style.display='block'; return; }
+  const nextId = products.reduce((m,p)=>Math.max(m,p.id),0)+1;
+  products.push({ id:nextId, name, batch:document.getElementById('f-batch').value.trim()||'—', cat:document.getElementById('f-cat').value, mfg:document.getElementById('f-mfg').value||'—', exp });
+  syncPush('products', products); closeOverlay('prod-overlay'); renderProducts();
+}
+
+function deleteProduct(id){
+  if(!confirm('Remove this product?')) return;
+  products=products.filter(p=>p.id!==id); syncPush('products', products); renderProducts();
+}
+
+function exportCSV(){
+  const headers=['Control No.','SKU','R&D In-charge','Production Date','Target Shelf Life','Frequency','Samples',...MONTHS.map(m=>`${m} ${currentSelectedYear}`)];
+  const rows=studies.map(s=>{
+    const yearObj = (s.history && s.history[currentSelectedYear]) ? s.history[currentSelectedYear] : {};
+    return [s.ctrl,s.name,s.incharge,s.proddate,s.shelf,s.freq,s.samples,...Array.from({length:12},(_, i)=>yearObj[i]||'')].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',');
+  });
+  const csv=[headers.join(','),...rows].join('\n');
+  const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download=`shelf-life-schedule-${currentSelectedYear}.csv`; a.click();
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function formatDate(d){
+  if(!d||d==='—') return '—';
+  const [y,m,day]=d.split('-'); return `${day}/${m}/${y}`;
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeOverlay('study-overlay'); closeOverlay('prod-overlay'); } });
+
+// Start initialization pipeline
+initLiveListener();
+</script>
+</body>
+</html>
